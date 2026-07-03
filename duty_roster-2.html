@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>함정 당직 관리</title>
+<style>
+  :root{
+    --navy-950:#0b1626;
+    --navy-900:#0f1b2d;
+    --navy-800:#152640;
+    --navy-700:#1d3358;
+    --steel-500:#5b7a9e;
+    --steel-200:#c7d4e3;
+    --paper:#f4f6f9;
+    --paper-card:#ffffff;
+    --ink:#13233b;
+    --ink-soft:#4a5b74;
+    --gold:#c9a24b;
+    --gold-dark:#9c7c33;
+    --silver:#9aa7b8;
+    --ok:#2f7a55;
+    --ok-bg:#e6f3ec;
+    --warn:#b8860b;
+    --warn-bg:#fbf1dc;
+    --danger:#b23a3a;
+    --danger-bg:#fbe9e9;
+    --line:#dde3ec;
+    --radius:10px;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Pretendard",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:980px;margin:0 auto;padding-bottom:60px;}
+
+  /* Gate (ship select / login) */
+  .gate-wrap{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:linear-gradient(160deg,var(--navy-950) 0%,var(--navy-800) 100%);
+  }
+  .gate-card{
+    background:#fff;border-radius:14px;padding:28px;max-width:380px;width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,.3);
+  }
+  .gate-card h2{margin:2px 0 4px;font-size:19px;color:var(--navy-900);}
+  .gate-card p.sub{margin:0 0 18px;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .ship-list{list-style:none;padding:0;margin:0 0 16px;max-height:240px;overflow:auto;}
+  .ship-list li{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;
+    font-size:13.5px;font-weight:700;color:var(--navy-900);
+  }
+  .divider-or{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:11.5px;margin:16px 0;}
+  .divider-or::before,.divider-or::after{content:"";flex:1;height:1px;background:var(--line);}
+  .error-text{color:var(--danger);font-size:12px;margin:-6px 0 12px;}
+
+  /* Topbar */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 16px;background:var(--navy-950);color:var(--steel-200);font-size:12px;
+  }
+  .topbar strong{color:#fff;}
+  .topbar-actions{display:flex;gap:8px;}
+  .topbar-actions button{
+    background:none;border:1px solid rgba(255,255,255,.25);color:var(--steel-200);
+    border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;
+  }
+  .topbar-actions button:hover{color:#fff;border-color:#fff;}
+
+  /* Header */
+  .header{
+    background:linear-gradient(160deg,var(--navy-950) 0%,var(--navy-800) 100%);
+    color:#fff;
+    padding:28px 24px 20px;
+    position:relative;
+    overflow:hidden;
+  }
+  .header::after{
+    content:"";
+    position:absolute;right:-40px;top:-40px;width:200px;height:200px;
+    background:radial-gradient(circle,rgba(201,162,75,0.18) 0%,transparent 70%);
+  }
+  .eyebrow{
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--gold);font-weight:600;margin-bottom:6px;
+  }
+  .eyebrow svg{width:14px;height:14px;flex:none;}
+  .header h1{
+    margin:0;font-size:26px;font-weight:800;letter-spacing:-0.01em;
+  }
+  .header p{
+    margin:6px 0 0;color:var(--steel-200);font-size:13.5px;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;
+    background:var(--navy-900);
+    padding:0 16px;
+    overflow-x:auto;
+  }
+  .tab-btn{
+    background:none;border:none;color:var(--steel-200);
+    padding:13px 16px;font-size:13.5px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+    border-bottom:2.5px solid transparent;
+    letter-spacing:-0.01em;
+  }
+  .tab-btn.active{color:#fff;border-bottom-color:var(--gold);}
+  .tab-btn:hover{color:#fff;}
+
+  .content{padding:20px 16px 0;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    margin:0 0 4px;font-size:15px;font-weight:800;color:var(--navy-900);
+    display:flex;align-items:center;gap:8px;
+  }
+  .card .hint{margin:0 0 14px;font-size:12.5px;color:var(--ink-soft);}
+
+  /* Roster columns */
+  .roster-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  @media(max-width:720px){.roster-grid{grid-template-columns:1fr;}}
+  .roster-col{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .roster-col-head{
+    padding:10px 12px;font-size:13px;font-weight:800;color:#fff;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .roster-col-head.officer{background:linear-gradient(90deg,var(--gold-dark),var(--gold));}
+  .roster-col-head.subofficer{background:linear-gradient(90deg,#6b7686,var(--silver));}
+  .roster-col-head.staff{background:linear-gradient(90deg,var(--navy-800),var(--steel-500));}
+  .roster-col-head span.count{font-weight:600;font-size:11.5px;opacity:.9;}
+  .roster-list{list-style:none;margin:0;padding:6px;min-height:40px;}
+  .roster-list li{
+    display:flex;align-items:center;gap:8px;
+    padding:7px 8px;border-radius:7px;font-size:13.5px;
+  }
+  .roster-list li:hover{background:var(--paper);}
+  .roster-list .idx{
+    width:20px;height:20px;border-radius:50%;background:var(--navy-900);color:#fff;
+    font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .roster-list .name{flex:1;}
+  .roster-list .mini-btn{
+    background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:13px;padding:2px 4px;
+  }
+  .roster-list .mini-btn:hover{color:var(--danger);}
+  .roster-list .mini-btn.move:hover{color:var(--navy-900);}
+  .add-row{display:flex;gap:6px;padding:8px;border-top:1px dashed var(--line);}
+  .add-row input{flex:1;min-width:0;}
+
+  /* Inputs */
+  input[type=text], input[type=password], input[type=date], select, textarea{
+    border:1px solid var(--line);border-radius:7px;padding:8px 10px;
+    font-size:13.5px;color:var(--ink);background:#fff;font-family:inherit;
+  }
+  textarea{width:100%;resize:vertical;min-height:56px;}
+  button.btn{
+    border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;
+    cursor:pointer;background:var(--navy-900);color:#fff;letter-spacing:-0.01em;
+  }
+  button.btn:hover{background:var(--navy-700);}
+  button.btn.ghost{background:#fff;color:var(--navy-900);border:1px solid var(--line);}
+  button.btn.ghost:hover{background:var(--paper);}
+  button.btn.gold{background:var(--gold-dark);}
+  button.btn.gold:hover{background:#86672a;}
+  button.btn.small{padding:5px 10px;font-size:12px;}
+  button.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* Docking days */
+  .day-add{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .day-chip-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .day-chip{
+    display:flex;align-items:center;gap:8px;background:var(--paper);
+    border:1px solid var(--line);border-radius:20px;padding:6px 6px 6px 12px;font-size:12.5px;font-weight:600;
+  }
+  .day-chip button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:13px;padding:2px 6px;}
+  .day-chip button:hover{color:var(--danger);}
+  .empty-note{color:var(--ink-soft);font-size:13px;padding:10px 2px;}
+
+  /* Schedule view toggle */
+  .view-toggle{display:flex;gap:6px;margin-bottom:14px;}
+  .view-toggle button{
+    border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 13px;
+    font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink-soft);
+  }
+  .view-toggle button.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+
+  /* Calendar */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-nav .cal-title{font-size:15px;font-weight:800;color:var(--navy-900);}
+  .cal-nav button{
+    border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 11px;
+    font-size:12.5px;font-weight:700;cursor:pointer;color:var(--navy-900);
+  }
+  .cal-nav button:hover{background:var(--paper);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);padding:4px 0 6px;}
+  .cal-dow.sun{color:var(--danger);}
+  .cal-dow.sat{color:var(--navy-700);}
+  .cal-cell{
+    min-height:78px;border:1px solid var(--line);border-radius:8px;padding:5px 5px 4px;
+    background:#fbfcfe;
+  }
+  .cal-cell.empty{border:none;background:none;}
+  .cal-cell.docking{
+    background:#fffaf0;border-color:#eddcaf;cursor:pointer;
+  }
+  .cal-cell.docking:hover{background:#fdf3dc;}
+  .cal-cell.today .cal-daynum{
+    background:var(--navy-900);color:#fff;border-radius:50%;
+  }
+  .cal-daynum{
+    font-size:11.5px;font-weight:700;color:var(--ink);width:19px;height:19px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:3px;
+  }
+  .cal-daynum.sun{color:var(--danger);}
+  .cal-daynum.sat{color:var(--navy-700);}
+  .cal-role{
+    display:flex;align-items:center;gap:3px;font-size:10px;line-height:1.5;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);
+  }
+  .cal-role.overridden{color:var(--danger);font-weight:700;}
+  .cal-role-dot{width:6px;height:6px;border-radius:50%;flex:none;}
+  .cal-role-dot.officer{background:var(--gold-dark);}
+  .cal-role-dot.subofficer{background:var(--silver);}
+  .cal-role-dot.staff{background:var(--steel-500);}
+  .day-role-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:9px 4px;border-bottom:1px solid var(--line);
+  }
+  .day-role-row:last-child{border-bottom:none;}
+
+  /* Schedule table */
+  .sched-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .sched-table th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-soft);padding:8px 10px;border-bottom:2px solid var(--navy-900);
+  }
+  .sched-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .sched-table tr:hover td{background:#fafbfd;}
+  .date-cell{font-weight:700;color:var(--navy-900);white-space:nowrap;}
+  .date-cell .dow{font-weight:500;color:var(--ink-soft);font-size:11.5px;margin-left:4px;}
+  .duty-cell{cursor:pointer;}
+  .duty-name{font-weight:600;}
+  .duty-name.overridden{color:var(--danger);}
+  .duty-orig{font-size:11px;color:var(--ink-soft);text-decoration:line-through;margin-left:4px;}
+  .role-tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-bottom:2px;}
+  .role-tag.officer{background:#fbf1dc;color:var(--gold-dark);}
+  .role-tag.subofficer{background:#eef0f3;color:#5a6472;}
+  .role-tag.staff{background:#e8eef7;color:var(--navy-700);}
+
+  /* Board */
+  .board-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .filter-group{display:flex;gap:6px;}
+  .filter-btn{
+    border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;
+    cursor:pointer;color:var(--ink-soft);
+  }
+  .filter-btn.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+
+  .req-card{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;background:#fff;}
+  .req-card.done{opacity:.75;}
+  .req-card.mine{border-color:#e3d3a6;}
+  .req-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+  .req-meta{font-size:12px;color:var(--ink-soft);margin-bottom:2px;}
+  .req-title{font-weight:800;font-size:14.5px;color:var(--navy-900);}
+  .mine-tag{font-size:10.5px;font-weight:800;color:var(--gold-dark);}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+  .badge.open{background:var(--warn-bg);color:var(--warn);}
+  .badge.done{background:var(--ok-bg);color:var(--ok);}
+  .badge.type-sub{background:#eef0f3;color:#5a6472;}
+  .badge.type-swap{background:#e8eef7;color:var(--navy-700);}
+  .req-note{font-size:13px;color:var(--ink);margin:8px 0;line-height:1.5;white-space:pre-wrap;}
+  .vol-list{margin:8px 0 4px;padding-left:0;list-style:none;}
+  .vol-list li{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--paper);border-radius:7px;padding:7px 10px;font-size:12.5px;margin-bottom:6px;
+  }
+  .vol-name{font-weight:700;}
+  .vol-note{color:var(--ink-soft);font-weight:400;margin-left:4px;}
+  .vol-swap-detail{display:block;font-size:11.5px;color:var(--navy-700);font-weight:700;margin-top:2px;}
+  .req-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+  .author-note{font-size:12px;color:var(--ink-soft);font-style:italic;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(11,22,38,.55);display:none;
+    align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:88vh;overflow:auto;}
+  .modal h3{margin:0 0 14px;font-size:16px;color:var(--navy-900);}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select, .field textarea{width:100%;}
+  .type-choice{display:flex;gap:8px;}
+  .type-choice button{flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink-soft);}
+  .type-choice button.sel{border-color:var(--navy-900);background:var(--navy-900);color:#fff;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--navy-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;
+    box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:80;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,-6px);}
+
+  .footnote{text-align:center;color:var(--ink-soft);font-size:11.5px;padding:18px 16px 4px;}
+  .loading{padding:40px;text-align:center;color:var(--ink-soft);font-size:13px;}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="loading" style="padding:80px;">불러오는 중…</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ Constants ============ */
+const SHIPS_REGISTRY_KEY = 'ships-registry-v1';
+const SESSION_KEY = 'session-v1';
+const ROLE_LABEL = { officer:'당직관', subofficer:'부당직관', staff:'당직원' };
+const ROLE_ORDER = ['officer','subofficer','staff'];
+
+function shipDataKey(shipId){ return `ship-${shipId}-data`; }
+function shipUsersKey(shipId){ return `ship-${shipId}-users`; }
+
+/* ============ Global state ============ */
+let session = null;              // {shipId, shipName, userName}
+let ships = [];                  // ship registry (for gate screens)
+let selectedShipForLogin = null; // {id, name}
+let gateScreen = 'shipSelect';   // 'shipSelect' | 'login'
+
+let data = null; // {officers, subofficers, staff, dockingDays, overrides, swapRequests}
+let activeTab = 'roster';
+let boardFilter = 'all';
+let scheduleView = 'calendar';
+let calYear = null, calMonth = null;
+
+function defaultData(){
+  return { officers:[], subofficers:[], staff:[], dockingDays:[], overrides:{}, swapRequests:[] };
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function val(id){ const el=document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ============ Password hashing (lightweight identity, not high security) ============ */
+async function hashPassword(pw){
+  try{
+    const enc = new TextEncoder().encode(pw);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h = 0;
+    for(let i=0;i<pw.length;i++){ h = (h*31 + pw.charCodeAt(i)) | 0; }
+    return 'fb'+h;
+  }
+}
+
+/* ============ Storage: ships registry / users / session ============ */
+async function loadShipsRegistry(){
+  try{
+    const res = await window.storage.get(SHIPS_REGISTRY_KEY, true);
+    ships = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ ships = []; }
+}
+async function saveShipsRegistry(){
+  try{ await window.storage.set(SHIPS_REGISTRY_KEY, JSON.stringify(ships), true); }
+  catch(e){ showToast('함정 목록 저장에 실패했습니다.'); }
+}
+async function loadShipUsers(shipId){
+  try{
+    const res = await window.storage.get(shipUsersKey(shipId), true);
+    return res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveShipUsers(shipId, users){
+  try{ await window.storage.set(shipUsersKey(shipId), JSON.stringify(users), true); }
+  catch(e){ showToast('계정 저장에 실패했습니다.'); }
+}
+async function loadSessionFromStorage(){
+  try{
+    const res = await window.storage.get(SESSION_KEY, false);
+    return res && res.value ? JSON.parse(res.value) : null;
+  }catch(e){ return null; }
+}
+async function saveSession(){
+  try{ await window.storage.set(SESSION_KEY, JSON.stringify(session), false); }catch(e){}
+}
+async function clearSessionStorage(){
+  try{ await window.storage.delete(SESSION_KEY, false); }catch(e){}
+}
+
+/* ============ Storage: ship data ============ */
+async function loadShipData(shipId){
+  try{
+    const res = await window.storage.get(shipDataKey(shipId), true);
+    data = res && res.value ? JSON.parse(res.value) : defaultData();
+  }catch(e){ data = defaultData(); }
+}
+async function saveData(){
+  try{ await window.storage.set(shipDataKey(session.shipId), JSON.stringify(data), true); }
+  catch(e){ showToast('저장에 실패했습니다. 다시 시도해 주세요.'); }
+}
+
+/* ============ Init ============ */
+async function init(){
+  session = await loadSessionFromStorage();
+  if(session){
+    renderRoot();
+    await loadShipData(session.shipId);
+    renderTabContent();
+  } else {
+    await loadShipsRegistry();
+    gateScreen = 'shipSelect';
+    renderRoot();
+  }
+}
+
+/* ============ Root render (gate vs app) ============ */
+function renderRoot(){
+  const root = document.getElementById('root');
+  if(!session){
+    root.innerHTML = gateScreen==='shipSelect' ? shipSelectHTML() : loginHTML();
+    attachGateHandlers();
+  } else {
+    root.innerHTML = appShellHTML();
+    attachShellHandlers();
+    if(data) renderTabContent();
+  }
+}
+
+/* ============ Gate: ship select ============ */
+function shipSelectHTML(){
+  return `
+  <div class="gate-wrap"><div class="gate-card">
+    <div class="eyebrow" style="color:var(--gold-dark);">⚓ 함정 선택</div>
+    <h2>당직 관리에 오신 것을 환영합니다</h2>
+    <p class="sub">소속 함정을 선택하거나 새로 등록하세요. 함정별로 인원, 정박일, 당직표, 게시판 데이터가 서로 분리되어 저장됩니다.</p>
+    ${ships.length ? `<ul class="ship-list">
+      ${ships.map(s=>`<li>${escapeHtml(s.name)}<button class="btn small" data-select-ship="${s.id}">선택</button></li>`).join('')}
+    </ul>` : `<p class="empty-note">등록된 함정이 없습니다. 아래에서 새로 등록해 주세요.</p>`}
+    <div class="divider-or">또는</div>
+    <div class="field"><label>새 함정 등록</label><input type="text" id="newShipName" placeholder="예: 율곡이이함"></div>
+    <div id="gateError" class="error-text" style="display:none;"></div>
+    <button class="btn gold" id="createShipBtn" style="width:100%;">함정 등록하고 시작</button>
+  </div></div>`;
+}
+
+/* ============ Gate: login ============ */
+function loginHTML(){
+  return `
+  <div class="gate-wrap"><div class="gate-card">
+    <div class="eyebrow" style="color:var(--gold-dark);">⚓ ${escapeHtml(selectedShipForLogin.name)}</div>
+    <h2>개인 로그인</h2>
+    <p class="sub">이름과 비밀번호로 로그인하세요. 처음이라면 계정을 새로 만들어 주세요.</p>
+    <div class="field"><label>이름</label><input type="text" id="loginName" placeholder="이름"></div>
+    <div class="field"><label>비밀번호</label><input type="password" id="loginPw" placeholder="비밀번호 (4자 이상)"></div>
+    <div id="gateError" class="error-text" style="display:none;"></div>
+    <button class="btn" id="loginBtn" style="width:100%;margin-bottom:8px;">로그인</button>
+    <button class="btn ghost" id="registerBtn" style="width:100%;">계정 만들기</button>
+    <button class="btn ghost" id="backToShipBtn" style="width:100%;margin-top:14px;border:none;color:var(--ink-soft);">← 다른 함정 선택</button>
+  </div></div>`;
+}
+
+function showGateError(msg){
+  const el = document.getElementById('gateError');
+  if(el){ el.textContent = msg; el.style.display = 'block'; }
+}
+
+function attachGateHandlers(){
+  if(gateScreen==='shipSelect'){
+    document.querySelectorAll('[data-select-ship]').forEach(b=>{
+      b.onclick = ()=>{
+        selectedShipForLogin = ships.find(x=>x.id===b.dataset.selectShip);
+        gateScreen = 'login';
+        renderRoot();
+      };
+    });
+    document.getElementById('createShipBtn').onclick = async ()=>{
+      const name = val('newShipName');
+      if(!name){ showGateError('함정 이름을 입력해 주세요.'); return; }
+      if(ships.find(x=>x.name===name)){ showGateError('이미 등록된 함정 이름입니다. 목록에서 선택해 주세요.'); return; }
+      const s = { id: uid(), name, createdAt: Date.now() };
+      ships.push(s);
+      await saveShipsRegistry();
+      selectedShipForLogin = s;
+      gateScreen = 'login';
+      renderRoot();
+    };
+  } else {
+    document.getElementById('loginBtn').onclick = handleLogin;
+    document.getElementById('registerBtn').onclick = handleRegister;
+    document.getElementById('backToShipBtn').onclick = async ()=>{
+      selectedShipForLogin = null;
+      await loadShipsRegistry();
+      gateScreen = 'shipSelect';
+      renderRoot();
+    };
+  }
+}
+
+async function handleLogin(){
+  const name = val('loginName'), pw = val('loginPw');
+  if(!name || !pw){ showGateError('이름과 비밀번호를 입력해 주세요.'); return; }
+  const users = await loadShipUsers(selectedShipForLogin.id);
+  const u = users.find(x=>x.name===name);
+  if(!u){ showGateError('등록되지 않은 이름입니다. 아래 "계정 만들기"를 눌러 주세요.'); return; }
+  const hash = await hashPassword(pw);
+  if(hash !== u.passwordHash){ showGateError('비밀번호가 일치하지 않습니다.'); return; }
+  await enterShip(selectedShipForLogin.id, selectedShipForLogin.name, name, true);
+}
+
+async function handleRegister(){
+  const name = val('loginName'), pw = val('loginPw');
+  if(!name || !pw){ showGateError('이름과 비밀번호를 입력해 주세요.'); return; }
+  if(pw.length < 4){ showGateError('비밀번호는 4자 이상 입력해 주세요.'); return; }
+  const users = await loadShipUsers(selectedShipForLogin.id);
+  if(users.find(x=>x.name===name)){ showGateError('이미 등록된 이름입니다. 로그인해 주세요.'); return; }
+  const hash = await hashPassword(pw);
+  users.push({ name, passwordHash: hash });
+  await saveShipUsers(selectedShipForLogin.id, users);
+  await enterShip(selectedShipForLogin.id, selectedShipForLogin.name, name, true);
+}
+
+async function enterShip(shipId, shipName, userName, persist){
+  session = { shipId, shipName, userName };
+  if(persist) await saveSession();
+  data = null;
+  activeTab = 'roster'; scheduleView = 'calendar'; boardFilter = 'all';
+  calYear = null; calMonth = null;
+  renderRoot();
+  await loadShipData(shipId);
+  renderTabContent();
+}
+
+async function doLogout(){
+  session = null;
+  await clearSessionStorage();
+  selectedShipForLogin = null;
+  await loadShipsRegistry();
+  gateScreen = 'shipSelect';
+  renderRoot();
+}
+
+/* ============ App shell ============ */
+function appShellHTML(){
+  return `
+  <div class="app">
+    <div class="topbar">
+      <div>⚓ <strong>${escapeHtml(session.shipName)}</strong> · ${escapeHtml(session.userName)}님</div>
+      <div class="topbar-actions">
+        <button id="switchShipBtn">함정 변경</button>
+        <button id="logoutBtn">로그아웃</button>
+      </div>
+    </div>
+    <div class="header">
+      <div class="eyebrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="M9 15l2-6 6-2-2 6-6 2z" fill="currentColor" stroke="none"/></svg>
+        항해일지 · 정박 당직
+      </div>
+      <h1>함정 당직 관리</h1>
+      <p>당직관·부당직관·당직원 순번을 자동으로 배정하고, 교환·대타를 게시판에서 조율합니다.</p>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn ${activeTab==='roster'?'active':''}" data-tab="roster">인원 명단</button>
+      <button class="tab-btn ${activeTab==='days'?'active':''}" data-tab="days">정박일</button>
+      <button class="tab-btn ${activeTab==='schedule'?'active':''}" data-tab="schedule">당직표</button>
+      <button class="tab-btn ${activeTab==='board'?'active':''}" data-tab="board">교환 게시판</button>
+    </div>
+    <div class="content" id="content"><div class="loading">불러오는 중…</div></div>
+    <div class="footnote">이 함정의 데이터는 같은 함정에 로그인한 모든 인원에게 공유됩니다.</div>
+  </div>`;
+}
+
+function attachShellHandlers(){
+  document.getElementById('switchShipBtn').onclick = doLogout;
+  document.getElementById('logoutBtn').onclick = doLogout;
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.onclick = ()=>{ activeTab = b.dataset.tab; renderTabContent(); };
+  });
+}
+
+/* ============ Tab content render ============ */
+function renderTabContent(){
+  const content = document.getElementById('content');
+  if(!content) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===activeTab);
+  });
+  const panel = document.createElement('div');
+  panel.className = 'panel active';
+  if(activeTab==='roster') panel.innerHTML = renderRoster();
+  if(activeTab==='days') panel.innerHTML = renderDays();
+  if(activeTab==='schedule') panel.innerHTML = renderSchedule();
+  if(activeTab==='board') panel.innerHTML = renderBoard();
+  content.innerHTML = '';
+  content.appendChild(panel);
+  attachTabHandlers();
+}
+
+/* ---------- shared helpers ---------- */
+function sortedDays(){ return [...data.dockingDays].sort(); }
+function dowLabel(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  return ['일','월','화','수','목','금','토'][d.getDay()];
+}
+function roleArray(role){
+  if(role==='officer') return data.officers;
+  if(role==='subofficer') return data.subofficers;
+  return data.staff;
+}
+function scheduledName(role, dayIndex){
+  const arr = roleArray(role);
+  if(!arr.length) return '(명단 없음)';
+  return arr[dayIndex % arr.length];
+}
+function overrideKey(date, role){ return date+'::'+role; }
+function getAssigned(date, dayIndex, role){
+  const ov = data.overrides[overrideKey(date, role)];
+  const original = scheduledName(role, dayIndex);
+  return { name: ov || original, original, overridden: !!ov && ov !== original };
+}
+function getMyAssignments(name){
+  const days = sortedDays();
+  const result = [];
+  days.forEach((date, idx)=>{
+    ROLE_ORDER.forEach(role=>{
+      const a = getAssigned(date, idx, role);
+      if(a.name === name) result.push({ date, role, idx });
+    });
+  });
+  return result;
+}
+
+/* ---------- Roster tab ---------- */
+function renderRoster(){
+  const cols = [
+    {role:'officer', label:'당직관', cls:'officer'},
+    {role:'subofficer', label:'부당직관', cls:'subofficer'},
+    {role:'staff', label:'당직원', cls:'staff'}
+  ];
+  return `
+  <div class="card">
+    <h2>인원 명단 및 순번</h2>
+    <p class="hint">순번 순서대로 정박일마다 자동으로 다음 사람이 배정됩니다. 화살표로 순서를 바꿀 수 있습니다.</p>
+    <div class="roster-grid">
+      ${cols.map(c=>{
+        const arr = roleArray(c.role);
+        return `
+        <div class="roster-col">
+          <div class="roster-col-head ${c.cls}"><span>${c.label}</span><span class="count">${arr.length}명</span></div>
+          <ul class="roster-list">
+            ${arr.map((name,i)=>`
+              <li>
+                <span class="idx">${i+1}</span>
+                <span class="name">${escapeHtml(name)}</span>
+                <button class="mini-btn move" data-act="up" data-role="${c.role}" data-idx="${i}" ${i===0?'disabled':''}>▲</button>
+                <button class="mini-btn move" data-act="down" data-role="${c.role}" data-idx="${i}" ${i===arr.length-1?'disabled':''}>▼</button>
+                <button class="mini-btn" data-act="del" data-role="${c.role}" data-idx="${i}">✕</button>
+              </li>`).join('') || `<li class="empty-note">등록된 인원이 없습니다.</li>`}
+          </ul>
+          <div class="add-row">
+            <input type="text" placeholder="이름 추가" data-add-input="${c.role}">
+            <button class="btn small" data-act="add" data-role="${c.role}">추가</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- Days tab ---------- */
+function renderDays(){
+  const days = sortedDays();
+  return `
+  <div class="card">
+    <h2>정박일 관리</h2>
+    <p class="hint">정박하여 당직 근무가 필요한 날짜를 등록하세요. 각 날짜는 09:00 ~ 익일 09:00 근무입니다.</p>
+    <div class="day-add">
+      <input type="date" id="newDayInput">
+      <button class="btn" id="addDayBtn">정박일 추가</button>
+    </div>
+    ${days.length ? `<div class="day-chip-list">
+      ${days.map(d=>`<div class="day-chip">${d} (${dowLabel(d)})<button data-act="delday" data-date="${d}">✕</button></div>`).join('')}
+    </div>` : `<div class="empty-note">등록된 정박일이 없습니다. 날짜를 추가해 주세요.</div>`}
+  </div>`;
+}
+
+/* ---------- Schedule tab ---------- */
+function renderSchedule(){
+  const days = sortedDays();
+  if(!days.length){
+    return `<div class="card"><h2>당직표</h2><div class="empty-note">먼저 '정박일' 탭에서 정박일을 등록해 주세요.</div></div>`;
+  }
+  const toggle = `
+    <div class="view-toggle">
+      <button data-view="calendar" class="${scheduleView==='calendar'?'active':''}">달력형</button>
+      <button data-view="table" class="${scheduleView==='table'?'active':''}">목록형</button>
+    </div>`;
+  return `
+  <div class="card">
+    <h2>당직표</h2>
+    <p class="hint">근무시간: 당일 09:00 ~ 익일 09:00 · 정박일을 클릭하면 직접 교체하거나 게시판에 교환/대타를 등록할 수 있습니다.</p>
+    ${toggle}
+    ${scheduleView==='calendar' ? renderScheduleCalendar() : renderScheduleTable(days)}
+  </div>`;
+}
+
+function renderScheduleTable(days){
+  const rows = days.map((date, idx)=>{
+    const cells = ROLE_ORDER.map(role=>{
+      const a = getAssigned(date, idx, role);
+      return `
+      <td class="duty-cell" data-act="cellmenu" data-date="${date}" data-role="${role}" data-idx="${idx}">
+        <span class="role-tag ${role}">${ROLE_LABEL[role]}</span><br>
+        <span class="duty-name ${a.overridden?'overridden':''}">${escapeHtml(a.name)}</span>
+        ${a.overridden ? `<span class="duty-orig">${escapeHtml(a.original)}</span>` : ''}
+      </td>`;
+    }).join('');
+    return `<tr><td class="date-cell">${date}<span class="dow">(${dowLabel(date)})</span></td>${cells}</tr>`;
+  }).join('');
+  return `
+    <div style="overflow-x:auto;">
+      <table class="sched-table">
+        <thead><tr><th>날짜</th><th>당직관</th><th>부당직관</th><th>당직원</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function ensureCalInit(){
+  if(calYear===null){
+    const days = sortedDays();
+    let base;
+    if(days.length){
+      const todayStr = new Date().toISOString().slice(0,10);
+      const upcoming = days.find(d=>d>=todayStr) || days[days.length-1];
+      base = new Date(upcoming+'T00:00:00');
+    } else {
+      base = new Date();
+    }
+    calYear = base.getFullYear();
+    calMonth = base.getMonth();
+  }
+}
+
+function getCalendarWeeks(year, month){
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const cells = [];
+  for(let i=0;i<startWeekday;i++) cells.push(null);
+  for(let d=1; d<=daysInMonth; d++) cells.push(d);
+  while(cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+  return weeks;
+}
+
+function renderScheduleCalendar(){
+  ensureCalInit();
+  const days = sortedDays();
+  const dockingSet = new Set(days);
+  const weeks = getCalendarWeeks(calYear, calMonth);
+  const todayStr = new Date().toISOString().slice(0,10);
+  const dowLabels = ['일','월','화','수','목','금','토'];
+
+  const grid = weeks.map(week=>{
+    return week.map((d, col)=>{
+      if(d===null) return `<div class="cal-cell empty"></div>`;
+      const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+      const isDocking = dockingSet.has(dateStr);
+      const isToday = dateStr===todayStr;
+      const dowCls = col===0?'sun':(col===6?'sat':'');
+      if(!isDocking){
+        return `<div class="cal-cell ${isToday?'today':''}"><div class="cal-daynum ${dowCls}">${d}</div></div>`;
+      }
+      const idx = days.indexOf(dateStr);
+      const roleLines = ROLE_ORDER.map(role=>{
+        const a = getAssigned(dateStr, idx, role);
+        return `<div class="cal-role ${a.overridden?'overridden':''}"><span class="cal-role-dot ${role}"></span>${escapeHtml(a.name)}</div>`;
+      }).join('');
+      return `<div class="cal-cell docking ${isToday?'today':''}" data-act="daymenu" data-date="${dateStr}" data-idx="${idx}">
+        <div class="cal-daynum ${dowCls}">${d}</div>
+        ${roleLines}
+      </div>`;
+    }).join('');
+  }).join('');
+
+  return `
+    <div class="cal-nav">
+      <button data-navmonth="-1">◀ 이전달</button>
+      <div class="cal-title">${calYear}년 ${calMonth+1}월</div>
+      <button data-navmonth="1">다음달 ▶</button>
+    </div>
+    <div class="cal-grid">
+      ${dowLabels.map((l,i)=>`<div class="cal-dow ${i===0?'sun':(i===6?'sat':'')}">${l}</div>`).join('')}
+      ${grid}
+    </div>`;
+}
+
+/* ---------- Board tab ---------- */
+function renderBoard(){
+  const reqs = [...data.swapRequests].sort((a,b)=> (a.status===b.status? b.createdAt-a.createdAt : (a.status==='open'?-1:1)));
+  const filtered = reqs.filter(r=> boardFilter==='all' ? true : r.status===boardFilter);
+  const days = sortedDays();
+
+  return `
+  <div class="card">
+    <h2>교환 · 대타 게시판</h2>
+    <p class="hint">자신의 당직을 대신 서줄 사람을 구하거나(대타), 다른 사람과 당직일을 맞바꾸고 싶을 때(교환) 등록하세요. 교환의 경우 응답자가 자신의 당직일을 제안하면, 요청자가 확인 후 승인합니다.</p>
+    <button class="btn gold" id="openNewReqBtn" ${days.length? '' : 'disabled'}>+ 새 요청 등록</button>
+    ${days.length? '' : '<p class="hint" style="margin-top:8px;color:var(--danger);">먼저 정박일을 등록해야 요청을 만들 수 있습니다.</p>'}
+  </div>
+
+  <div class="board-toolbar">
+    <div class="filter-group">
+      <button class="filter-btn ${boardFilter==='all'?'active':''}" data-filter="all">전체</button>
+      <button class="filter-btn ${boardFilter==='open'?'active':''}" data-filter="open">모집중</button>
+      <button class="filter-btn ${boardFilter==='done'?'active':''}" data-filter="done">완료</button>
+    </div>
+  </div>
+
+  ${filtered.length ? filtered.map(r=>renderReqCard(r)).join('') : `<div class="empty-note">표시할 요청이 없습니다.</div>`}
+  `;
+}
+
+function renderReqCard(r){
+  const typeLabel = r.type==='sub' ? '대타 구함' : '교환 희망';
+  const typeCls = r.type==='sub' ? 'type-sub' : 'type-swap';
+  const isAuthor = session.userName === r.author;
+
+  const volItems = r.volunteers.map(v=>{
+    const swapDetail = r.type==='swap'
+      ? `<span class="vol-swap-detail">↔ ${v.proposedDate} (${dowLabel(v.proposedDate)}) · ${ROLE_LABEL[v.proposedRole]} 제안</span>`
+      : '';
+    let rightSide = '';
+    if(r.status==='open' && isAuthor){
+      rightSide = `<button class="btn small" data-act="approve" data-reqid="${r.id}" data-volid="${v.id}">이 제안 승인</button>`;
+    } else if(r.status==='done' && r.confirmedVolunteer===v.name){
+      rightSide = `<span class="badge done">확정됨</span>`;
+    }
+    return `
+      <li>
+        <span><span class="vol-name">${escapeHtml(v.name)}</span>${v.note? `<span class="vol-note">— ${escapeHtml(v.note)}</span>`:''}${swapDetail}</span>
+        ${rightSide}
+      </li>`;
+  }).join('');
+
+  let actionsHtml = '';
+  if(r.status==='open'){
+    if(isAuthor){
+      actionsHtml = `
+        <button class="btn small ghost" data-act="cancelreq" data-reqid="${r.id}">요청 취소</button>
+        <span class="author-note">${r.volunteers.length ? '아래 제안 중 하나를 승인하세요.' : '아직 지원/제안이 없습니다.'}</span>`;
+    } else {
+      const label = r.type==='sub' ? '지원하기' : '교환 제안하기';
+      actionsHtml = `<button class="btn small ghost" data-act="respond" data-reqid="${r.id}">${label}</button>`;
+    }
+  } else if(isAuthor){
+    actionsHtml = `<button class="btn small ghost" data-act="delreq" data-reqid="${r.id}">삭제</button>`;
+  }
+
+  return `
+  <div class="req-card ${r.status==='done'?'done':''} ${isAuthor?'mine':''}">
+    <div class="req-top">
+      <div>
+        <div class="req-title">${r.date} (${dowLabel(r.date)}) · ${ROLE_LABEL[r.role]}</div>
+        <div class="req-meta">원래 당직자: ${escapeHtml(r.originalName)} · 작성자: ${escapeHtml(r.author)} ${isAuthor?'<span class="mine-tag">· 나의 요청</span>':''}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:flex-start;">
+        <span class="badge ${typeCls}">${typeLabel}</span>
+        <span class="badge ${r.status}">${r.status==='open'?'모집중':'완료'}</span>
+      </div>
+    </div>
+    ${r.note ? `<div class="req-note">${escapeHtml(r.note)}</div>` : ''}
+    ${volItems ? `<ul class="vol-list">${volItems}</ul>` : ''}
+    <div class="req-actions">${actionsHtml}</div>
+  </div>`;
+}
+
+/* ============ Tab event wiring ============ */
+function attachTabHandlers(){
+  // Roster
+  document.querySelectorAll('[data-act="add"]').forEach(b=>{
+    b.onclick = ()=>{
+      const role = b.dataset.role;
+      const input = document.querySelector(`[data-add-input="${role}"]`);
+      const v = input.value.trim();
+      if(!v) return;
+      roleArray(role).push(v);
+      input.value='';
+      saveData(); renderTabContent();
+    };
+  });
+  document.querySelectorAll('[data-add-input]').forEach(inp=>{
+    inp.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); document.querySelector(`[data-act="add"][data-role="${inp.dataset.addInput}"]`).click(); } };
+  });
+  document.querySelectorAll('[data-act="del"]').forEach(b=>{
+    b.onclick = ()=>{
+      roleArray(b.dataset.role).splice(parseInt(b.dataset.idx),1);
+      saveData(); renderTabContent();
+    };
+  });
+  document.querySelectorAll('[data-act="up"], [data-act="down"]').forEach(b=>{
+    b.onclick = ()=>{
+      const arr = roleArray(b.dataset.role);
+      const i = parseInt(b.dataset.idx);
+      const j = b.dataset.act==='up' ? i-1 : i+1;
+      if(j<0 || j>=arr.length) return;
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+      saveData(); renderTabContent();
+    };
+  });
+
+  // Days
+  const addDayBtn = document.getElementById('addDayBtn');
+  if(addDayBtn){
+    addDayBtn.onclick = ()=>{
+      const v = document.getElementById('newDayInput').value;
+      if(!v) return;
+      if(!data.dockingDays.includes(v)){
+        data.dockingDays.push(v);
+        saveData(); renderTabContent();
+      } else {
+        showToast('이미 등록된 날짜입니다.');
+      }
+    };
+  }
+  document.querySelectorAll('[data-act="delday"]').forEach(b=>{
+    b.onclick = ()=>{
+      data.dockingDays = data.dockingDays.filter(d=>d!==b.dataset.date);
+      saveData(); renderTabContent();
+    };
+  });
+
+  // Schedule (table view)
+  document.querySelectorAll('[data-act="cellmenu"]').forEach(td=>{
+    td.onclick = ()=>openCellMenu(td.dataset.date, td.dataset.role, parseInt(td.dataset.idx));
+  });
+  // Schedule view toggle
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick = ()=>{ scheduleView = b.dataset.view; renderTabContent(); };
+  });
+  // Calendar month nav
+  document.querySelectorAll('[data-navmonth]').forEach(b=>{
+    b.onclick = ()=>{
+      ensureCalInit();
+      calMonth += parseInt(b.dataset.navmonth);
+      if(calMonth<0){ calMonth=11; calYear--; }
+      if(calMonth>11){ calMonth=0; calYear++; }
+      renderTabContent();
+    };
+  });
+  // Calendar day click
+  document.querySelectorAll('[data-act="daymenu"]').forEach(cell=>{
+    cell.onclick = ()=>openDayModal(cell.dataset.date, parseInt(cell.dataset.idx));
+  });
+
+  // Board
+  const newReqBtn = document.getElementById('openNewReqBtn');
+  if(newReqBtn) newReqBtn.onclick = ()=>openNewRequestModal();
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    b.onclick = ()=>{ boardFilter = b.dataset.filter; renderTabContent(); };
+  });
+  document.querySelectorAll('[data-act="respond"]').forEach(b=>{
+    b.onclick = ()=>openRespondModal(b.dataset.reqid);
+  });
+  document.querySelectorAll('[data-act="approve"]').forEach(b=>{
+    b.onclick = ()=>approveProposal(b.dataset.reqid, b.dataset.volid);
+  });
+  document.querySelectorAll('[data-act="cancelreq"]').forEach(b=>{
+    b.onclick = ()=>{
+      const r = data.swapRequests.find(x=>x.id===b.dataset.reqid);
+      if(r && session.userName===r.author && confirm('이 요청을 취소하시겠습니까?')){
+        r.status='done'; saveData(); renderTabContent();
+      }
+    };
+  });
+  document.querySelectorAll('[data-act="delreq"]').forEach(b=>{
+    b.onclick = ()=>{
+      const r = data.swapRequests.find(x=>x.id===b.dataset.reqid);
+      if(r && session.userName===r.author && confirm('요청을 삭제하시겠습니까?')){
+        data.swapRequests = data.swapRequests.filter(x=>x.id!==b.dataset.reqid);
+        saveData(); renderTabContent();
+      }
+    };
+  });
+}
+
+/* ============ Modal helpers ============ */
+function openModal(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('modalBody').innerHTML = '';
+}
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='modalOverlay') closeModal();
+});
+
+/* ============ Schedule: cell / day modals ============ */
+function openDayModal(date, idx){
+  const rows = ROLE_ORDER.map(role=>{
+    const a = getAssigned(date, idx, role);
+    return `
+      <div class="day-role-row">
+        <div>
+          <span class="role-tag ${role}">${ROLE_LABEL[role]}</span><br>
+          <span class="duty-name ${a.overridden?'overridden':''}">${escapeHtml(a.name)}</span>
+          ${a.overridden ? `<span class="duty-orig">${escapeHtml(a.original)}</span>` : ''}
+        </div>
+        <button class="btn small ghost" data-daymodal-role="${role}">관리</button>
+      </div>`;
+  }).join('');
+  openModal(`
+    <h3>${date} (${dowLabel(date)}) 당직 관리</h3>
+    ${rows}
+    <div class="modal-actions"><button class="btn ghost" id="closeDayModal">닫기</button></div>
+  `);
+  document.getElementById('closeDayModal').onclick = closeModal;
+  document.querySelectorAll('[data-daymodal-role]').forEach(b=>{
+    b.onclick = ()=>openCellMenu(date, b.dataset.daymodalRole, idx);
+  });
+}
+
+function openCellMenu(date, role, idx){
+  const a = getAssigned(date, idx, role);
+  openModal(`
+    <h3>${date} (${dowLabel(date)}) · ${ROLE_LABEL[role]}</h3>
+    <p class="hint">현재 배정: <strong>${escapeHtml(a.name)}</strong>${a.overridden? ` <span style="color:var(--ink-soft);">(원 순번: ${escapeHtml(a.original)})</span>`:''}</p>
+    <div class="field">
+      <label>직접 교체 (이름 입력)</label>
+      <input type="text" id="directName" placeholder="새 담당자 이름" value="${a.overridden? escapeHtml(a.name):''}">
+    </div>
+    <div class="modal-actions">
+      ${a.overridden ? `<button class="btn ghost" id="resetOv">원래 순번으로 되돌리기</button>`:''}
+      <button class="btn ghost" id="toBoard">교환/대타 게시판에 등록</button>
+      <button class="btn" id="applyDirect">교체 저장</button>
+    </div>
+  `);
+  document.getElementById('applyDirect').onclick = ()=>{
+    const v = val('directName');
+    if(!v){ showToast('이름을 입력해 주세요.'); return; }
+    data.overrides[overrideKey(date,role)] = v;
+    saveData(); closeModal(); renderTabContent();
+  };
+  const resetBtn = document.getElementById('resetOv');
+  if(resetBtn){
+    resetBtn.onclick = ()=>{
+      delete data.overrides[overrideKey(date,role)];
+      saveData(); closeModal(); renderTabContent();
+    };
+  }
+  document.getElementById('toBoard').onclick = ()=>{
+    closeModal();
+    openNewRequestModal({date, role});
+  };
+}
+
+/* ============ Board: new request modal ============ */
+function openNewRequestModal(prefill){
+  const days = sortedDays();
+  let selType = 'sub';
+  const dateOptions = days.map(d=>`<option value="${d}" ${prefill&&prefill.date===d?'selected':''}>${d} (${dowLabel(d)})</option>`).join('');
+  openModal(`
+    <h3>교환 · 대타 요청 등록</h3>
+    <p class="hint">작성자: <strong>${escapeHtml(session.userName)}</strong></p>
+    <div class="field">
+      <label>날짜</label>
+      <select id="reqDate">${dateOptions}</select>
+    </div>
+    <div class="field">
+      <label>직책</label>
+      <select id="reqRole">
+        ${ROLE_ORDER.map(r=>`<option value="${r}" ${prefill&&prefill.role===r?'selected':''}>${ROLE_LABEL[r]}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field">
+      <label>요청 유형</label>
+      <div class="type-choice">
+        <button type="button" class="sel" data-type="sub">대타 구함</button>
+        <button type="button" data-type="swap">교환 희망</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>메모 (사유 등)</label>
+      <textarea id="reqNote" placeholder="예: 개인 사정으로 대타를 구합니다"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelReqModal">취소</button>
+      <button class="btn gold" id="submitReq">등록</button>
+    </div>
+  `);
+  document.querySelectorAll('.type-choice button').forEach(b=>{
+    b.onclick = ()=>{
+      selType = b.dataset.type;
+      document.querySelectorAll('.type-choice button').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+    };
+  });
+  document.getElementById('cancelReqModal').onclick = closeModal;
+  document.getElementById('submitReq').onclick = ()=>{
+    const date = document.getElementById('reqDate').value;
+    const role = document.getElementById('reqRole').value;
+    const note = val('reqNote');
+    if(!date){ showToast('날짜를 선택해 주세요.'); return; }
+    const idx = sortedDays().indexOf(date);
+    const a = getAssigned(date, idx, role);
+    data.swapRequests.push({
+      id: uid(), date, role, type: selType,
+      originalName: a.name, author: session.userName, note,
+      status:'open', volunteers:[], confirmedVolunteer:null, createdAt: Date.now()
+    });
+    saveData(); closeModal(); activeTab='board'; renderTabContent();
+    showToast('요청이 등록되었습니다.');
+  };
+}
+
+/* ============ Board: respond (substitute or swap proposal) ============ */
+function openRespondModal(reqId){
+  const r = data.swapRequests.find(x=>x.id===reqId);
+  if(!r) return;
+
+  if(r.type==='sub'){
+    openModal(`
+      <h3>대타 지원하기</h3>
+      <p class="hint">${r.date} (${dowLabel(r.date)}) · ${ROLE_LABEL[r.role]} 대타로 지원합니다. 지원자: <strong>${escapeHtml(session.userName)}</strong></p>
+      <div class="field"><label>메모 (선택)</label><textarea id="respNote" placeholder="전달할 내용이 있다면 입력하세요"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="cancelRespModal">취소</button>
+        <button class="btn" id="submitResp">지원 등록</button>
+      </div>
+    `);
+    document.getElementById('cancelRespModal').onclick = closeModal;
+    document.getElementById('submitResp').onclick = ()=>{
+      r.volunteers.push({ id: uid(), name: session.userName, note: val('respNote'), ts: Date.now() });
+      saveData(); closeModal(); renderTabContent();
+      showToast('지원이 등록되었습니다. 요청자의 승인을 기다려 주세요.');
+    };
+    return;
+  }
+
+  // swap type: responder must pick one of their own duty days to offer
+  const mine = getMyAssignments(session.userName).filter(m=>!(m.date===r.date && m.role===r.role));
+  if(!mine.length){
+    openModal(`
+      <h3>교환 제안하기</h3>
+      <p class="hint">현재 배정된 본인의 당직일이 없어 교환을 제안할 수 없습니다. '정박일'과 '당직표'에서 본인의 당직일을 확인해 주세요.</p>
+      <div class="modal-actions"><button class="btn ghost" id="closeNoAssignModal">닫기</button></div>
+    `);
+    document.getElementById('closeNoAssignModal').onclick = closeModal;
+    return;
+  }
+  const options = mine.map(m=>`<option value="${m.date}::${m.role}">${m.date} (${dowLabel(m.date)}) · ${ROLE_LABEL[m.role]}</option>`).join('');
+  openModal(`
+    <h3>교환 제안하기</h3>
+    <p class="hint">${r.date} (${dowLabel(r.date)}) · ${ROLE_LABEL[r.role]} 당직과 교환할, 본인이 맡은 당직일을 선택하세요. 제안자: <strong>${escapeHtml(session.userName)}</strong></p>
+    <div class="field">
+      <label>내가 대신 제공할 당직일</label>
+      <select id="respMyDay">${options}</select>
+    </div>
+    <div class="field"><label>메모 (선택)</label><textarea id="respNote" placeholder="전달할 내용이 있다면 입력하세요"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelRespModal">취소</button>
+      <button class="btn" id="submitResp">교환 제안 등록</button>
+    </div>
+  `);
+  document.getElementById('cancelRespModal').onclick = closeModal;
+  document.getElementById('submitResp').onclick = ()=>{
+    const [proposedDate, proposedRole] = document.getElementById('respMyDay').value.split('::');
+    r.volunteers.push({
+      id: uid(), name: session.userName, note: val('respNote'), ts: Date.now(),
+      proposedDate, proposedRole
+    });
+    saveData(); closeModal(); renderTabContent();
+    showToast('교환 제안이 등록되었습니다. 요청자의 승인을 기다려 주세요.');
+  };
+}
+
+/* ============ Board: approve proposal (author only) ============ */
+function approveProposal(reqId, volId){
+  const r = data.swapRequests.find(x=>x.id===reqId);
+  if(!r) return;
+  if(session.userName !== r.author){ showToast('요청자만 승인할 수 있습니다.'); return; }
+  const v = r.volunteers.find(x=>x.id===volId);
+  if(!v) return;
+
+  const msg = r.type==='swap'
+    ? `${v.name}님과 당직을 교환합니다.\n${r.date}(${ROLE_LABEL[r.role]}) ↔ ${v.proposedDate}(${ROLE_LABEL[v.proposedRole]})\n당직표에 바로 반영됩니다. 진행하시겠습니까?`
+    : `${v.name}님을 대타로 확정합니다. 당직표에 바로 반영됩니다. 진행하시겠습니까?`;
+  if(!confirm(msg)) return;
+
+  data.overrides[overrideKey(r.date, r.role)] = v.name;
+  if(r.type==='swap'){
+    data.overrides[overrideKey(v.proposedDate, v.proposedRole)] = r.originalName;
+  }
+  r.status = 'done';
+  r.confirmedVolunteer = v.name;
+  saveData(); renderTabContent();
+  showToast('당직표에 자동으로 반영되었습니다.');
+}
+
+init();
+</script>
+</body>
+</html>
